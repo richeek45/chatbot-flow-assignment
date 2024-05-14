@@ -78,7 +78,7 @@ function App() {
     event.preventDefault()
   }
 
-  const handleNodeClick= (event: MouseEvent, node: Node) => {
+  const handleNodeClick= (_: MouseEvent, node: Node) => {
     setNodes((prevNodes) => {
       const updatedNodes = prevNodes.map(currNode => {
         if (currNode.id === node.id) {
