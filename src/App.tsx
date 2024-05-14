@@ -1,9 +1,11 @@
 import { ChangeEvent, DragEvent, MouseEvent, useCallback, useState } from 'react';
-import ReactFlow, { Background, BackgroundVariant, Connection, Controls, Edge, EdgeChange, MiniMap, Node, NodeChange, addEdge, applyEdgeChanges, applyNodeChanges, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
+import ReactFlow, { Background, BackgroundVariant, Connection, Controls, Edge, EdgeChange, MiniMap, Node, NodeChange, ReactFlowInstance, addEdge, applyEdgeChanges, applyNodeChanges, getIncomers, getOutgoers, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextUpdaterNode from './components/TextUpdaterNode';
 import { Button } from './components/ui/button';
 import { v4 as uuid } from 'uuid';
+import { useToast } from './components/ui/use-toast';
+import { Toaster } from './components/ui/toaster';
 
 const initialEdges = [{ id: 'e1-2', source: '1', target: '2', interactionWidth: 100 }];
 
@@ -34,11 +36,21 @@ function App() {
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
+  const { toast } = useToast()
+
+  const disconnectedNodes = nodes.filter(node => {
+    const inc = getIncomers(node, nodes, edges);
+    const out = getOutgoers(node, nodes, edges);
+    return !inc.length && !out.length;
+  }) 
+  console.log(disconnectedNodes)
+
+
   const { setViewport } = useReactFlow();
 
   const selectedNode = nodes.find(node => node.data.selected === true);
 
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -104,12 +116,23 @@ function App() {
   }, [selectedNode]);
 
   const onSave = useCallback(() => {
+    if (disconnectedNodes.length) {
+      toast({
+        title: "ERROR SAVING!",
+        description: "Connect the nodes before saving!",
+      })
+      return;
+    }
+
     if (reactFlowInstance) {
-      // @ts-expect-error -> type for reactFlowInstance
       const flow = reactFlowInstance?.toObject();
       localStorage.setItem(stateKey, JSON.stringify(flow));
+      toast({
+        title: "SAVED FLOW STATE!",
+        description: "Successfully saved the flow!",
+      })
     }
-  }, [reactFlowInstance]);
+  }, [reactFlowInstance, disconnectedNodes]);
 
   const onRestore = useCallback(() => {
     const restoreFlow = async () => {
@@ -124,6 +147,10 @@ function App() {
     };
 
     restoreFlow();
+    toast({
+      title: "RESTORED SAVED STATE!",
+      description: "Restored last saved flow!",
+    })
   }, [setNodes, setViewport]);
 
   return (
@@ -135,16 +162,15 @@ function App() {
       <div className='flex flex-row justify-between'>
         <div className='w-[80vw] h-[80vh] border-slate-300 reactflow-wrapper'>
           <ReactFlow 
-          ref={reactFlowInstance}
           nodes={nodes}
           edges={edges}
-          draggable="true"
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect} 
           nodeTypes={nodeTypes}
+          panOnDrag={false}
           onInit={setReactFlowInstance as never}
           onNodeClick={handleNodeClick}
           // fitView
@@ -173,9 +199,9 @@ function App() {
           /> 
           }
         </div>
-
       </div>
 
+      <Toaster />
     </div>
   )
 }
