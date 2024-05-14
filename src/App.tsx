@@ -1,5 +1,5 @@
-import { ChangeEvent, DragEvent, MouseEvent, useCallback, useRef } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, Node, addEdge, applyEdgeChanges, applyNodeChanges, useEdgesState, useNodesState } from 'reactflow';
+import { ChangeEvent, DragEvent, MouseEvent, useCallback, useState } from 'react';
+import ReactFlow, { Background, Controls, MiniMap, Node, addEdge, applyEdgeChanges, applyNodeChanges, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextUpdaterNode from './components/TextUpdaterNode';
 import { Button } from './components/ui/button';
@@ -27,16 +27,18 @@ const initialNodes = [
 ];
 
 const nodeTypes = { 'TEXT_MESSAGE': TextUpdaterNode };
+const stateKey = 'state-1';
 
 
 function App() {
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
-  const selectedNode = nodes.find(node => node.data.selected === true);
-  console.log(selectedNode)
+  const { setViewport } = useReactFlow();
 
-  const reactFlowInstance = useRef(null);
+  const selectedNode = nodes.find(node => node.data.selected === true);
+
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -88,14 +90,12 @@ function App() {
 
       return updatedNodes;
     })
-    console.log("node clicked", node)
   }
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setNodes((prevNodes) => {
       return prevNodes.map(currNode => {
         if (currNode.id === selectedNode?.data.id) {
-          console.log(selectedNode?.data.id, "id")
           return { ...currNode, data: { ...currNode.data, value: event.target.value }}
         }
         return currNode;
@@ -103,13 +103,36 @@ function App() {
     })
   }, [selectedNode]);
 
+  const onSave = useCallback(() => {
+    if (reactFlowInstance) {
+      const flow = reactFlowInstance?.toObject();
+      localStorage.setItem(stateKey, JSON.stringify(flow));
+    }
+  }, [reactFlowInstance]);
+
+  const onRestore = useCallback(() => {
+    const restoreFlow = async () => {
+      const flow = JSON.parse(localStorage.getItem(stateKey) ?? '');
+
+      if (flow) {
+        const { x = 0, y = 0, zoom = 1 } = flow.viewport;
+        setNodes(flow.nodes || []);
+        setEdges(flow.edges || []);
+        setViewport({ x, y, zoom });
+      }
+    };
+
+    restoreFlow();
+  }, [setNodes, setViewport]);
+
   return (
-    <div className=''>
+    <div>
       <nav className='h-[7vh] bg-slate-200 flex justify-end space-x-6 text-sm font-medium md:space-x-10' >
-        <Button size="sm" variant="outline" className='bg-white m-2 rounded-lg'>Save Changes</Button>
+        <Button size="sm" variant="outline" className='bg-white m-2 rounded-lg' onClick={onSave}>Save Changes</Button>
+        <Button size="sm" variant="outline" className='bg-white m-2 rounded-lg' onClick={onRestore}>Restore</Button>
       </nav>
       <div className='flex flex-row justify-between'>
-        <div className='w-[80vw] h-[80vh] border-slate-300'>
+        <div className='w-[80vw] h-[80vh] border-slate-300 reactflow-wrapper'>
           <ReactFlow 
           ref={reactFlowInstance}
           nodes={nodes}
@@ -121,6 +144,7 @@ function App() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect} 
           nodeTypes={nodeTypes}
+          onInit={setReactFlowInstance}
           onNodeClick={handleNodeClick}
           // fitView
           >
