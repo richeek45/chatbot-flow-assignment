@@ -43,7 +43,6 @@ function App() {
     const out = getOutgoers(node, nodes, edges);
     return !inc.length && !out.length;
   }) 
-  console.log(disconnectedNodes)
 
 
   const { setViewport } = useReactFlow();
@@ -181,11 +180,13 @@ function App() {
           </ReactFlow>
         </div>
 
-        <div>
+        <div className='flex flex-col gap-5 px-6 border-slate-200 border-2 h-[90vh]'>
           Sidebar
-          <TextUpdaterNode data={{ id: '', value: '', selected: false }} />
+          <TextUpdaterNode data={{ id: '', value: '', selected: false }} panelNode={true} />
 
           {selectedNode && 
+          <div>
+          <label>Edit Node Text</label>
           <input 
             id="text" 
             name="text" 
@@ -197,6 +198,7 @@ function App() {
               focus:border-slate-500  block w-4/5 px-1 py-1 placeholder-gray-400
             "
           /> 
+          </div>
           }
         </div>
       </div>
