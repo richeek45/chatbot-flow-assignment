@@ -1,5 +1,5 @@
 import { ChangeEvent, DragEvent, MouseEvent, useCallback, useState } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, Node, addEdge, applyEdgeChanges, applyNodeChanges, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
+import ReactFlow, { Background, BackgroundVariant, Connection, Controls, Edge, EdgeChange, MiniMap, Node, NodeChange, addEdge, applyEdgeChanges, applyNodeChanges, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextUpdaterNode from './components/TextUpdaterNode';
 import { Button } from './components/ui/button';
@@ -41,17 +41,17 @@ function App() {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
   const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [setNodes]
   );
 
   const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [setEdges]
   );
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
   );
 
@@ -105,6 +105,7 @@ function App() {
 
   const onSave = useCallback(() => {
     if (reactFlowInstance) {
+      // @ts-expect-error -> type for reactFlowInstance
       const flow = reactFlowInstance?.toObject();
       localStorage.setItem(stateKey, JSON.stringify(flow));
     }
@@ -144,13 +145,13 @@ function App() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect} 
           nodeTypes={nodeTypes}
-          onInit={setReactFlowInstance}
+          onInit={setReactFlowInstance as never}
           onNodeClick={handleNodeClick}
           // fitView
           >
             <Controls />
             <MiniMap />
-            <Background variant="dots" gap={12} size={1} />
+            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           </ReactFlow>
         </div>
 
